@@ -5,7 +5,6 @@ from ..models import orders as order_model, order_details as order_detail_model,
 from sqlalchemy import func
 
 def check_ingredients_availability(db: Session, order_details):
-    # For each sandwich in order details, check if resources are sufficient
     for od in order_details:
         sandwich_recipes = db.query(recipe_model.Recipe).filter(recipe_model.Recipe.sandwich_id == od.sandwich_id).all()
         for recipe in sandwich_recipes:
@@ -23,15 +22,12 @@ def apply_promo_code(db: Session, promo_code: str, total_price: float):
     ).first()
     if not promo:
         raise HTTPException(status_code=400, detail="Invalid or expired promo code")
-    # For simplicity, let's say promo gives 10% off (extend later if needed)
     discount = total_price * 0.10
     return total_price - discount, promo.promo_code
 
 def create(db: Session, request):
-    # Validate ingredients
     check_ingredients_availability(db, request.order_details)
 
-    # Calculate total price
     total_price = 0.0
     for od in request.order_details:
         sandwich = db.query(sandwich_model.Sandwich).filter(sandwich_model.Sandwich.id == od.sandwich_id).first()
@@ -39,10 +35,8 @@ def create(db: Session, request):
             raise HTTPException(status_code=404, detail=f"Sandwich with id {od.sandwich_id} not found")
         total_price += float(sandwich.price) * od.amount
 
-    # Apply promo code discount
     discounted_price, applied_code = apply_promo_code(db, getattr(request, "promo_code", None), total_price)
 
-    # Create order
     new_order = order_model.Order(
         customer_name=request.customer_name,
         description=request.description,
@@ -55,7 +49,6 @@ def create(db: Session, request):
     db.commit()
     db.refresh(new_order)
 
-    # Deduct resources
     for od in request.order_details:
         sandwich_recipes = db.query(recipe_model.Recipe).filter(recipe_model.Recipe.sandwich_id == od.sandwich_id).all()
         for recipe in sandwich_recipes:
@@ -64,7 +57,6 @@ def create(db: Session, request):
             db.add(resource)
     db.commit()
 
-    # Create order details
     for od in request.order_details:
         order_detail = order_detail_model.OrderDetail(
             order_id=new_order.id,
@@ -109,7 +101,6 @@ def get_orders_by_date_range(db: Session, start_date: datetime, end_date: dateti
     return db.query(order_model.Order).filter(order_model.Order.order_date >= start_date, order_model.Order.order_date <= end_date).all()
 
 def calculate_revenue_by_date(db: Session, target_date: datetime):
-    # Sum of sandwich prices * amount sold in orders on target_date
     from sqlalchemy.sql import cast, Date
     orders_on_date = db.query(order_model.Order).filter(
         cast(order_model.Order.order_date, Date) == target_date.date(),

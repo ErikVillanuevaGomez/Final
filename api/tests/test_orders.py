@@ -4,7 +4,6 @@ from ..main import app
 import pytest
 from ..models import orders as model
 
-# Create a test client for the app
 client = TestClient(app)
 
 
@@ -14,7 +13,6 @@ def db_session(mocker):
 
 
 def test_create_order(db_session):
-    # Create a sample order
     order_data = {
         "customer_name": "John Doe",
         "description": "Test order"
