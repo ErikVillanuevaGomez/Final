@@ -1,0 +1,41 @@
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from typing import List
+
+from ..controllers import order_details as controller
+from ..schemas import order_details as schema
+from ..dependencies.database import get_db
+
+router = APIRouter(
+    prefix="/order-details",
+    tags=["Order Details"]
+)
+
+@router.post("/", response_model=schema.OrderDetail)
+def create(request: schema.OrderDetailCreate, db: Session = Depends(get_db)):
+    return controller.create(db=db, request=request)
+
+@router.get("/", response_model=List[schema.OrderDetail])
+def read_all(db: Session = Depends(get_db)):
+    return controller.read_all(db=db)
+
+@router.get("/{item_id}", response_model=schema.OrderDetail)
+def read_one(item_id: int, db: Session = Depends(get_db)):
+    order_detail = controller.read_one(db=db, item_id=item_id)
+    if not order_detail:
+        raise HTTPException(status_code=404, detail="Order detail not found")
+    return order_detail
+
+@router.put("/{item_id}", response_model=schema.OrderDetail)
+def update(item_id: int, request: schema.OrderDetailUpdate, db: Session = Depends(get_db)):
+    try:
+        return controller.update(db=db, item_id=item_id, request=request)
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+@router.delete("/{item_id}")
+def delete(item_id: int, db: Session = Depends(get_db)):
+    try:
+        return controller.delete(db=db, item_id=item_id)
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=str(e))
